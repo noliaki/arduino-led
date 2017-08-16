@@ -1,24 +1,16 @@
 import five from 'johnny-five'
-interface AccelInterface {
-  x: number
-  y: number
-  z: number
-}
+import requestAnimationFrame from 'raf'
+import { AccelInterface } from './interface'
 
 export default class LED {
-  public static board: five.Board = new five.Board()
-  public static rgb: five.Led.RGB
-  public static accelToColor: Function = (accel: AccelInterface): void => {
-    LED.rgb.color({
-      red: accel.x
-      green: accel.y
-      blue: accel.z
-    })
+  private static R: number = 0
+  private static G: number = 0
+  private static B: number = 0
 
-    console.log(LED.rgb.color())
-  }
+  private static rgb: five.Led.RGB
+  private static board: five.Board = new five.Board()
 
-  public static init = (): Promise<any> => {
+  public static init (): Promise<any> {
     return new Promise((resolve, reject): any => {
       LED.board.on('ready', () => {
         LED.boardReady()
@@ -26,59 +18,57 @@ export default class LED {
       })
     })
   }
-  public static boardReady = (): void => {
-    LED.rgb = new five.Led.RGB({
-      pins: {
-        red: 6,
-        green: 5,
-        blue: 3
-      }
-    })
-    // LED.rgb.on()
+
+  public static accelToRGB (accel: AccelInterface = { x: 0, y: 0, z: 0}): string {
+    LED.R += Math.abs((accel.x) / 5)
+    LED.G += Math.abs((accel.y) / 5)
+    LED.B += Math.abs((accel.z) / 5)
+
+    if ( LED.R > 255 ) {
+      LED.R = 255
+    }
+    if ( LED.G > 255 ) {
+      LED.G = 255
+    }
+    if ( LED.B > 255 ) {
+      LED.B = 255
+    }
+
+    const r: string = `00${Math.floor(LED.R).toString(16)}`.slice(-2)
+    const g: string = `00${Math.floor(LED.G).toString(16)}`.slice(-2)
+    const b: string = `00${Math.floor(LED.B).toString(16)}`.slice(-2)
+
+    return `#${r}${g}${b}`
   }
 
+  private static boardReady () {
+    LED.rgb = new five.Led.RGB({
+      pins: [6, 3, 5]
+    })
+
+    LED.decleaseRGB()
+    LED.board.loop(50, () => {
+      LED.rgb.color(LED.accelToRGB())
+    })
+  }
+
+  private static decleaseRGB (): void {
+    LED.R -= 1
+    LED.G -= 1
+    LED.B -= 1
+
+    if (LED.R < 0) {
+      LED.R = 0
+    }
+    if (LED.G < 0) {
+      LED.G = 0
+    }
+    if (LED.B < 0) {
+      LED.B = 0
+    }
+
+    console.log(LED.R, LED.G, LED.B)
+
+    requestAnimationFrame(LED.decleaseRGB)
+  }
 }
-
-LED.init().then(() => {
-  console.log('run')
-  LED.accelToColor({x: 0, y: 255, z: 0})
-})
-
-
-// const board = new five.Board()
-
-// board.on('ready', () => {
-//   const led = new five.Led.RGB({
-//     pins: {
-//       red: 6,
-//       green: 5,
-//       blue: 3
-//     }
-//   })
-
-//   const ledpin = new five.Led(3)
-
-//   ledpin.fadeIn()
-//   // this.repl.inject({
-//   //   led: led
-//   // })
-
-//   led.color({
-//     red: 0,
-//     green: 10,
-//     blue: 255
-//   })
-//   led.on()
-
-//   let index = 0
-
-//   const rainbow = ["#FF0000", "#FF7F00", "#FFFF00", "#00FF00", "#0000FF", "#4B0082", "#8F00FF"]
-
-//   board.loop(500, function() {
-//     led.color(rainbow[index++])
-//     console.log(led.color())
-//     if (index === rainbow.length) {
-//       index = 0
-//     }
-//   })
-// })
