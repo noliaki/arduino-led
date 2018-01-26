@@ -48,7 +48,7 @@ export default class LED {
 
     LED.decleaseRGB()
     LED.board.loop(50, () => {
-      LED.rgb.color(LED.accelToRGB())
+      LED.rgb.color(LED.accelToRGB() as any)
     })
   }
 
